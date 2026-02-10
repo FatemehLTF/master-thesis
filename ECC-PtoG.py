@@ -1,3 +1,6 @@
+# Final ECC code: used to align peptide dataset coordinates to the Glycan coordinates 
+# apply inverse warp vector 
+# Code should be run for each slide separately 
 #Libraries
 import cv2
 import numpy as np
@@ -31,11 +34,11 @@ df_pep = pd.read_csv(PEPTIDE_CSV) #Peptide df
 # Filter out matrix spots
 df_gly = df_gly[~df_gly["tissue_type"].astype(str).str.contains("matrix", case=False, na=False)]
 df_pep = df_pep[~df_pep["tissue_type"].astype(str).str.contains("matrix", case=False, na=False)]
-# Filter and keep just only one slide (266 or 267)
+# Filter and keep only one slide (266 or 267)
 df_gly = df_gly[df_gly["Experiment"] == 266]
 df_pep = df_pep[df_pep["Experiment"] == 266]
 #############################################################################
-# Creating ref m/z : sum 5 selected m/z
+# Creating ref m/z : sum 5 selected m/z : simulated column name : m.z.sum_5
 #Peptide
 pep_mz_columns = [col for col in df_pep.columns if col.startswith('m.z.')]
 print(f"Found {len(pep_mz_columns)} m/z columns")
@@ -167,7 +170,7 @@ cc, warp_forward = cv2.findTransformECC(
     gaussFiltSize=1
 )
 
-# Compute INVERSE warp vector
+# Compute INVERSE warp vector: used to transform peptide dataset to glycan dataset
 a, b, tx = warp_forward[0]
 c, d, ty = warp_forward[1]
 det = a * d - b * c
@@ -177,7 +180,7 @@ warp_inverse = np.array([
     [-c / det, a / det, (c * tx - a * ty) / det]
 ], dtype=np.float32)
 
-# Save transformation matrices
+# Save transformation matrices (forward and inverse)
 np.savetxt(BASE_FOLDER / "warp_matrix_peptide_to_glycan_FORWARD.csv",
            warp_forward, delimiter=",", fmt="%.10f")
 np.savetxt(BASE_FOLDER / "warp_matrix_glycan_to_peptide_INVERSE.csv",
@@ -299,3 +302,4 @@ generate_all_ions(df_pep, OUTPUT_PEPTIDE, "#ff0000", use_aligned=True, ref_param
 ##############################################################################
 # Save aligned peptide dataframe
 df_pep.to_csv(BASE_FOLDER / "peptide_df_aligned_to_glycan.csv", index=False)
+
